@@ -1,113 +1,204 @@
-import Image from "next/image";
+import { DataTable } from "@/components/stocks/markets/data-table"
+import yahooFinance from "yahoo-finance2"
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { DEFAULT_INTERVAL, DEFAULT_RANGE } from "@/lib/yahoo-finance/constants"
+import { Interval } from "@/types/yahoo-finance"
+import { Suspense } from "react"
+import MarketsChart from "@/components/chart/MarketsChart"
+import Link from "next/link"
+import { columns } from "@/components/stocks/markets/columns"
+import SectorPerformance from "@/components/stocks/SectorPerformance"
+import {
+  validateInterval,
+  validateRange,
+} from "@/lib/yahoo-finance/fetchChartData"
+import { fetchStockSearch } from "@/lib/yahoo-finance/fetchStockSearch"
 
-export default function Home() {
+function isMarketOpen() {
+  const now = new Date()
+
+  // Convert to New York time
+  const options: Intl.DateTimeFormatOptions = {
+    timeZone: "America/New_York",
+    hour: "numeric",
+    minute: "numeric",
+    hour12: false,
+  }
+  const formatter = new Intl.DateTimeFormat([], options)
+
+  const timeString = formatter.format(now)
+  const [hour, minute] = timeString.split(":").map(Number)
+  const timeInET = hour + minute / 60
+
+  // Get the day of the week in New York time
+  const dayInET = new Date(
+    now.toLocaleString("en-US", { timeZone: "America/New_York" })
+  ).getDay()
+
+  // Check if the current time is between 9:30 AM and 4:00 PM ET on a weekday
+  if (dayInET >= 1 && dayInET <= 5 && timeInET >= 9.5 && timeInET < 16) {
+    return true
+  } else {
+    return false
+  }
+}
+
+const tickersFutures = [
+  { symbol: "ES=F", shortName: "S&P 500 Futures" },
+  { symbol: "NQ=F", shortName: "NASDAQ Futures" },
+  { symbol: "YM=F", shortName: "Dow Jones Futures" },
+  { symbol: "RTY=F", shortName: "Russell 2000 Futures" },
+  { symbol: "CL=F", shortName: "Crude Oil" },
+  { symbol: "GC=F", shortName: "Gold" },
+  { symbol: "SI=F", shortName: "Silver" },
+  { symbol: "EURUSD=X", shortName: "EUR/USD" },
+  { symbol: "^TNX", shortName: "10 Year Bond" },
+  { symbol: "BTC-USD", shortName: "Bitcoin" },
+]
+
+const tickerAfterOpen = [
+  { symbol: "^GSPC", shortName: "S&P 500" },
+  { symbol: "^IXIC", shortName: "NASDAQ" },
+  { symbol: "^DJI", shortName: "Dow Jones" },
+  { symbol: "^RUT", shortName: "Russell 2000" },
+  { symbol: "CL=F", shortName: "Crude Oil" },
+  { symbol: "GC=F", shortName: "Gold" },
+  { symbol: "SI=F", shortName: "Silver" },
+  { symbol: "EURUSD=X", shortName: "EUR/USD" },
+  { symbol: "^TNX", shortName: "10 Year Bond" },
+  { symbol: "BTC-USD", shortName: "Bitcoin" },
+]
+
+function getMarketSentiment(changePercentage: number | undefined) {
+  if (!changePercentage) {
+    return "neutral"
+  }
+  if (changePercentage > 0.1) {
+    return "bullish"
+  } else if (changePercentage < -0.1) {
+    return "bearish"
+  } else {
+    return "neutral"
+  }
+}
+
+export default async function Home({
+  searchParams,
+}: {
+  searchParams?: {
+    ticker?: string
+    range?: string
+    interval?: string
+  }
+}) {
+  const tickers = isMarketOpen() ? tickerAfterOpen : tickersFutures
+
+  const ticker = searchParams?.ticker || tickers[0].symbol
+  const range = validateRange(searchParams?.range || DEFAULT_RANGE)
+  const interval = validateInterval(
+    range,
+    (searchParams?.interval as Interval) || DEFAULT_INTERVAL
+  )
+  const news = await fetchStockSearch("^DJI", 1)
+
+  const promises = tickers.map(({ symbol }) =>
+    yahooFinance.quoteCombine(symbol)
+  )
+  const results = await Promise.all(promises)
+
+  const resultsWithTitles = results.map((result, index) => ({
+    ...result,
+    shortName: tickers[index].shortName,
+  }))
+
+  const marketSentiment = getMarketSentiment(
+    resultsWithTitles[0].regularMarketChangePercent
+  )
+
+  const sentimentColor =
+    marketSentiment === "bullish"
+      ? "text-green-500"
+      : marketSentiment === "bearish"
+        ? "text-red-500"
+        : "text-neutral-500"
+
+  const sentimentBackground =
+    marketSentiment === "bullish"
+      ? "bg-green-500/10"
+      : marketSentiment === "bearish"
+        ? "bg-red-300/50 dark:bg-red-950/50"
+        : "bg-neutral-500/10"
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+    <div className="container">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 lg:flex-row">
+          <div className="w-full lg:w-1/2">
+            <Card className="relative flex h-full flex-col justify-between overflow-hidden">
+              <CardHeader>
+                <CardTitle className="z-50 w-fit rounded-full px-4  py-2 font-medium dark:bg-neutral-100/5">
+                  The markets are{" "}
+                  <strong className={sentimentColor}>{marketSentiment}</strong>
+                </CardTitle>
+              </CardHeader>
+              {news.news[0] && news.news[0].title && (
+                <CardFooter className="flex-col items-start">
+                  <p className="mb-2 text-sm font-semibold text-neutral-500 dark:text-neutral-500">
+                    What you need to know today
+                  </p>
+                  <Link
+                    prefetch={false}
+                    href={news.news[0].link}
+                    className="text-lg font-extrabold"
+                  >
+                    {news.news[0].title}
+                  </Link>
+                </CardFooter>
+              )}
+              <div
+                className={`pointer-events-none absolute inset-0 z-0 h-[65%] w-[65%] -translate-x-[10%] -translate-y-[30%] rounded-full blur-3xl ${sentimentBackground}`}
+              />
+            </Card>
+          </div>
+          <div className="w-full lg:w-1/2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Sector Performance</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Suspense fallback={<div>Loading...</div>}>
+                  <SectorPerformance />
+                </Suspense>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+        <div>
+          <h2 className="py-4 text-xl font-medium">Markets</h2>
+          <Card className="flex flex-col gap-4 p-6 lg:flex-row">
+            <div className="w-full lg:w-1/2">
+              <Suspense fallback={<div>Loading...</div>}>
+                <DataTable columns={columns} data={resultsWithTitles} />
+              </Suspense>
+            </div>
+            <div className="w-full lg:w-1/2">
+              <Suspense fallback={<div>Loading...</div>}>
+                <MarketsChart
+                  ticker={ticker}
+                  range={range}
+                  interval={interval}
+                />
+              </Suspense>
+            </div>
+          </Card>
         </div>
       </div>
-
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-full sm:before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full sm:after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Explore starter templates for Next.js.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50 text-balance`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  );
+    </div>
+  )
 }
