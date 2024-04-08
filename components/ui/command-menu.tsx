@@ -41,29 +41,6 @@ export default function CommandMenu() {
     return () => document.removeEventListener("keydown", down)
   }, [])
 
-  function HighlightedText({
-    text,
-    highlight,
-  }: {
-    text: string
-    highlight: string
-  }) {
-    const parts = text.split(new RegExp(`(${highlight})`, "gi"))
-    return (
-      <span>
-        {parts.map((part, i) =>
-          part.toLowerCase() === highlight.toLowerCase() ? (
-            <span key={i} style={{ backgroundColor: "yellow" }}>
-              {part}
-            </span>
-          ) : (
-            part
-          )
-        )}
-      </span>
-    )
-  }
-
   return (
     <div>
       <Button
@@ -127,21 +104,9 @@ export default function CommandMenu() {
                         router.push(`/stocks/${ticker.ticker}`)
                       }}
                     >
-                      {/* <p className="mr-2 font-semibold">{ticker.ticker}</p>
+                      <p className="mr-2 font-semibold">{ticker.ticker}</p>
                       <p className="text-sm text-muted-foreground">
                         {ticker.title}
-                      </p> */}
-                      <p className="mr-2 font-semibold">
-                        <HighlightedText
-                          text={ticker.ticker}
-                          highlight={search}
-                        />
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        <HighlightedText
-                          text={ticker.title}
-                          highlight={search}
-                        />
                       </p>
                     </CommandItem>
                   ))}
