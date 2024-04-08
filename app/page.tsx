@@ -140,7 +140,7 @@ export default async function Home({
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-4 lg:flex-row">
           <div className="w-full lg:w-1/2">
-            <Card className="relative flex h-full flex-col justify-between overflow-hidden">
+            <Card className="relative flex h-full min-h-[15rem] flex-col justify-between overflow-hidden">
               <CardHeader>
                 <CardTitle className="z-50 w-fit rounded-full px-4  py-2 font-medium dark:bg-neutral-100/5">
                   The markets are{" "}
