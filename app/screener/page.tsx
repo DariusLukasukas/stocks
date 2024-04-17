@@ -20,7 +20,7 @@ export default async function ScreenerPage({
   const screenerDataResults = await fetchScreenerStocks(screener)
 
   return (
-    <div className="container">
+    <div>
       <DataTable columns={columns} data={screenerDataResults.quotes} />
     </div>
   )

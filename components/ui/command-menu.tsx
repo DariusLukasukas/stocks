@@ -59,7 +59,7 @@ export default function CommandMenu() {
       <Command>
         <CommandDialog open={open} onOpenChange={setOpen}>
           <CommandInput
-            placeholder="Search for symbols or companies..."
+            placeholder="Search by symbols or companies..."
             value={search}
             onValueChange={setSearch}
           />

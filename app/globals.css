@@ -66,6 +66,13 @@
   }
 }
 
+html {
+  margin-left: calc(100vw - 100%);
+}
+body {
+  @apply !min-w-full;
+}
+
 @layer base {
   * {
     @apply border-border;

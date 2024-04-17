@@ -17,7 +17,10 @@ export const columns: ColumnDef<Quote>[] = [
       return (
         <Link
           prefetch={false}
-          href={`?ticker=${symbol}`}
+          href={{
+            pathname: "/",
+            query: { ticker: symbol },
+          }}
           className="font-medium"
         >
           {title}

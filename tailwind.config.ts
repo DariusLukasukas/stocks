@@ -18,6 +18,9 @@ const config = {
       },
     },
     extend: {
+      strokeWidth: {
+        "1.5": "1.5px",
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
